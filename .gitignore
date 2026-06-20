@@ -1,0 +1,26 @@
+# Environment variables
+.env
+
+# SQLite Databases
+*.db
+warehouse.db
+
+# Large Model files
+*.pt
+
+# Event video clips and output videos
+events/
+output_*.mp4
+output_carvid.mp4
+output_video2.mp4
+output_warehouse_advanced.mp4
+output_warehouse_carvid.mp4
+test.mp4
+result.jpg
+
+# Python cache files
+__pycache__/
+*.pyc
+
+# macOS system files
+.DS_Store
