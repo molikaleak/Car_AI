@@ -1,26 +1,58 @@
-# Environment variables
+# Environment variables and secrets
 .env
+.env.local
 
-# SQLite Databases
+# SQLite Databases (legacy)
 *.db
-warehouse.db
+*.sqlite3
 
-# Large Model files
+# Large Model files (YOLO)
 *.pt
+*.onnx
 
-# Event video clips and output videos
+# Input / Output Video and Image files
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.jpg
+*.jpeg
+*.png
+!report*.png  # Keep report templates if any, but ignore standard images unless specified
+
+# Explicitly ignore generated output files and clips
 events/
 output_*.mp4
-output_carvid.mp4
-output_video2.mp4
-output_warehouse_advanced.mp4
-output_warehouse_carvid.mp4
 test.mp4
 result.jpg
 
-# Python cache files
+# Python cache & virtual environments
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+env.bak/
+venv.bak/
 
-# macOS system files
+# Logs and databases
+logs/
+*.log
+.tracker.pid
+
+# IDEs and Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# macOS / OS system files
 .DS_Store
+Thumbs.db
+
+# Agent/AI customizations
+.agents/
+.gemini/

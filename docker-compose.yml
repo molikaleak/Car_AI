@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  # 1. Main YOLOv8/11 ByteTrack Core
+  tracker:
+    build: .
+    container_name: gateway_tracker
+    restart: unless-stopped
+    command: python main.py
+    volumes:
+      - .:/app
+    environment:
+      - SHOW_GUI=False # Disable OpenCV GUI window inside Docker
+    network_mode: host # Enables direct access to RTSP cameras on local network
+
+  # 2. FastAPI Dashboard Server
+  dashboard:
+    build: .
+    container_name: gateway_dashboard
+    restart: unless-stopped
+    command: python backend/app.py
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    depends_on:
+      - tracker
+
+  # 3. Telegram Polling Bot Receiver
+  telegram_bot:
+    build: .
+    container_name: gateway_telegram_bot
+    restart: unless-stopped
+    command: python backend/telegram_bot.py
+    volumes:
+      - .:/app
