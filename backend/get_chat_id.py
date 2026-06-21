@@ -1,12 +1,18 @@
 import requests
 import re
 import os
+import sys
 import dotenv
 
 # Load current env
 dotenv.load_dotenv()
 
-TOKEN = "8087248288:AAFWqMhPw116Gp2J1xAZovrNuuXpqaV5gsE"
+TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+if not TOKEN:
+    print("❌ Error: TELEGRAM_BOT_TOKEN not found in .env file.")
+    print("👉 Please add your bot token to the .env file: TELEGRAM_BOT_TOKEN=your_token_here")
+    sys.exit(1)
+
 print("🔍 Fetching updates from ChomRok_Car_DetectionBot...")
 print("👉 If you haven't yet, please open Telegram, go to t.me/ChomRok_Car_DetectionBot, and press 'Start' or send any message.")
 print("Checking for messages...")

@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Warehouse Gateway Intelligence Dashboard</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="glow-bg"></div>
+    <div class="app-container">
+        
+        <!-- HEADER -->
+        <header class="app-header">
+            <div class="header-logo">
+                <i class="fa-solid fa-industry logo-icon"></i>
+                <div class="logo-text">
+                    <h1>GATEWAY INTEL</h1>
+                    <p>REAL-TIME VEHICLE MONITORS</p>
+                </div>
+            </div>
+            
+            <div class="header-status">
+                <div class="status-badge" id="dbModeBadge">
+                    <span class="pulse-dot grey" id="dbPulse"></span>
+                    <span id="dbModeText">Detecting DB...</span>
+                </div>
+                <div class="status-badge" id="wsStatusBadge">
+                    <span class="pulse-dot red" id="wsPulse"></span>
+                    <span id="wsStatusText">OFFLINE</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- MAIN LAYOUT -->
+        <main class="dashboard-grid">
+            
+            <!-- ROW 1: STATS CARDS -->
+            <section class="metrics-container">
+                <!-- Large Inside Count Card -->
+                <div class="metric-card main-occupancy glass">
+                    <div class="card-glow"></div>
+                    <div class="metric-header">
+                        <h3>CARS CURRENTLY INSIDE</h3>
+                        <i class="fa-solid fa-car-side metric-icon text-glow-purple"></i>
+                    </div>
+                    <div class="metric-value">
+                        <span id="occupancyCount" class="text-glow-purple">0</span>
+                    </div>
+                    <div class="metric-footer">
+                        <p>Active warehouse inventory</p>
+                    </div>
+                </div>
+
+                <!-- Small Stats Stack -->
+                <div class="stats-stack">
+                    <div class="metric-card glass mini-card border-cyan">
+                        <div class="card-glow-cyan"></div>
+                        <div class="mini-header">
+                            <span class="label">TOTAL ENTRIES</span>
+                            <i class="fa-solid fa-arrow-right-to-bracket text-glow-cyan"></i>
+                        </div>
+                        <div class="mini-value text-glow-cyan" id="totalInCount">0</div>
+                        <div class="mini-footer">Today's entries</div>
+                    </div>
+                    
+                    <div class="metric-card glass mini-card border-orange">
+                        <div class="card-glow-orange"></div>
+                        <div class="mini-header">
+                            <span class="label">TOTAL EXITS</span>
+                            <i class="fa-solid fa-arrow-right-from-bracket text-glow-orange"></i>
+                        </div>
+                        <div class="mini-value text-glow-orange" id="totalOutCount">0</div>
+                        <div class="mini-footer">Today's exits</div>
+                    </div>
+                </div>
+
+                <!-- Gate Visualizer Status Card -->
+                <div class="metric-card gateway-hud-card glass">
+                    <div class="metric-header">
+                        <h3>GATEWAY STATUS</h3>
+                        <i class="fa-solid fa-microchip metric-icon"></i>
+                    </div>
+                    <div class="gate-visualizer-container">
+                        <div class="visualizer-gate-line" id="gateVisualLine">
+                            <span class="line-tag">CALIBRATED AXIS</span>
+                        </div>
+                        <div class="visualizer-car-indicator" id="crossingIndicator">
+                            <i class="fa-solid fa-car"></i>
+                        </div>
+                        <div class="visualizer-status-hud">
+                            <span class="hud-label">GATE ACTIVITY</span>
+                            <span class="hud-value active-glow" id="gateStatusText">MONITORING</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ROW 2: DETAILED CHARTS & FEED STREAM -->
+            <section class="details-container">
+                <!-- Traffic Chart Card -->
+                <div class="details-card chart-card glass">
+                    <div class="card-header">
+                        <h2><i class="fa-solid fa-chart-line"></i> Hourly Traffic Density</h2>
+                        <span class="subtext">Car entries and exits over 24 hours</span>
+                    </div>
+                    <div class="chart-wrapper">
+                        <canvas id="trafficChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Live Logs Card -->
+                <div class="details-card logs-card glass">
+                    <div class="card-header">
+                        <h2><i class="fa-solid fa-list-check"></i> Real-time Feed Stream</h2>
+                        <span class="subtext" id="liveFeedSubtitle">Waiting for events...</span>
+                    </div>
+                    <div class="logs-stream-wrapper">
+                        <div class="logs-stream-header">
+                            <span>TIMESTAMP</span>
+                            <span>VEHICLE ID</span>
+                            <span>DIRECTION</span>
+                            <span>CLIP</span>
+                        </div>
+                        <div class="logs-stream-list" id="logsStreamList">
+                            <!-- Injected by JavaScript -->
+                            <div class="empty-state">
+                                <i class="fa-solid fa-circle-notch fa-spin"></i>
+                                <p>Syncing log database...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- JS Logic -->
+    <script>
+        let trafficChart = null;
+        let ws = null;
+        const apiHost = window.location.origin;
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${wsProtocol}//${window.location.host}/ws/events`;
+
+        // Pulse classes
+        const PULSE_CLASSES = ['pulse-cyan', 'pulse-orange', 'pulse-purple'];
+
+        // Init Chart.js
+        function initChart(labels, inData, outData) {
+            const ctx = document.getElementById('trafficChart').getContext('2d');
+            
+            // Create gradients
+            const gradIn = ctx.createLinearGradient(0, 0, 0, 300);
+            gradIn.addColorStop(0, 'rgba(0, 240, 255, 0.4)');
+            gradIn.addColorStop(1, 'rgba(0, 240, 255, 0.0)');
+
+            const gradOut = ctx.createLinearGradient(0, 0, 0, 300);
+            gradOut.addColorStop(0, 'rgba(255, 170, 0, 0.4)');
+            gradOut.addColorStop(1, 'rgba(255, 170, 0, 0.0)');
+
+            trafficChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Entries (IN)',
+                            data: inData,
+                            borderColor: '#00f0ff',
+                            borderWidth: 3,
+                            backgroundColor: gradIn,
+                            fill: true,
+                            tension: 0.4,
+                            pointBackgroundColor: '#00f0ff',
+                            pointRadius: 1,
+                            pointHoverRadius: 6,
+                            shadowColor: 'rgba(0, 240, 255, 0.5)',
+                            shadowBlur: 10
+                        },
+                        {
+                            label: 'Exits (OUT)',
+                            data: outData,
+                            borderColor: '#ffaa00',
+                            borderWidth: 3,
+                            backgroundColor: gradOut,
+                            fill: true,
+                            tension: 0.4,
+                            pointBackgroundColor: '#ffaa00',
+                            pointRadius: 1,
+                            pointHoverRadius: 6,
+                            shadowColor: 'rgba(255, 170, 0, 0.5)',
+                            shadowBlur: 10
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: '#94a3b8',
+                                font: { family: 'Inter', size: 12 }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { color: 'rgba(148, 163, 184, 0.07)' },
+                            ticks: { color: '#94a3b8', font: { family: 'Inter' } }
+                        },
+                        y: {
+                            grid: { color: 'rgba(148, 163, 184, 0.07)' },
+                            ticks: { color: '#94a3b8', font: { family: 'Inter' }, precision: 0 }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Fetch metrics
+        async function fetchStats() {
+            try {
+                const res = await fetch(`${apiHost}/api/stats`);
+                const stats = await res.json();
+                
+                if (stats.error) return;
+
+                animateValue('occupancyCount', parseInt(document.getElementById('occupancyCount').innerText), stats.inside, 600);
+                animateValue('totalInCount', parseInt(document.getElementById('totalInCount').innerText), stats.in, 600);
+                animateValue('totalOutCount', parseInt(document.getElementById('totalOutCount').innerText), stats.out, 600);
+
+                const dbBadge = document.getElementById('dbPulse');
+                dbBadge.className = 'pulse-dot green';
+                document.getElementById('dbModeText').innerText = stats.database_mode;
+            } catch (err) {
+                console.error("Stats fetch error:", err);
+            }
+        }
+
+        // Fetch logs
+        async function fetchLogs() {
+            try {
+                const res = await fetch(`${apiHost}/api/events?limit=20`);
+                const events = await res.json();
+                
+                const list = document.getElementById('logsStreamList');
+                list.innerHTML = '';
+                
+                if (!events || events.length === 0) {
+                    list.innerHTML = '<div class="empty-state"><p>No crossings registered today.</p></div>';
+                    document.getElementById('liveFeedSubtitle').innerText = "System idling";
+                    return;
+                }
+
+                document.getElementById('liveFeedSubtitle').innerText = "Streaming online logs";
+                events.forEach(ev => appendLogItem(ev, false));
+            } catch (err) {
+                console.error("Logs fetch error:", err);
+            }
+        }
+
+        // Fetch chart data
+        async function fetchChart() {
+            try {
+                const res = await fetch(`${apiHost}/api/chart-data`);
+                const chartData = await res.json();
+                
+                if (trafficChart) {
+                    trafficChart.data.datasets[0].data = chartData.in;
+                    trafficChart.data.datasets[1].data = chartData.out;
+                    trafficChart.update();
+                } else {
+                    initChart(chartData.labels, chartData.in, chartData.out);
+                }
+            } catch (err) {
+                console.error("Chart fetch error:", err);
+            }
+        }
+
+        // Append item to log stream
+        function appendLogItem(event, animate = true) {
+            const list = document.getElementById('logsStreamList');
+            const row = document.createElement('div');
+            row.className = `log-row ${animate ? 'new-log-row' : ''}`;
+            
+            const directionClass = event.direction === 'IN' ? 'dir-in' : 'dir-out';
+            const icon = event.direction === 'IN' ? 'fa-arrow-right-to-bracket' : 'fa-arrow-right-from-bracket';
+            
+            // Format clip link
+            let clipHtml = `<span class="no-clip">No Clip</span>`;
+            if (event.video_path) {
+                // Extracts relative path from events/event_...mp4
+                const cleanPath = event.video_path.replace(/\\/g, '/');
+                clipHtml = `<a href="${apiHost}/${cleanPath}" target="_blank" class="clip-link"><i class="fa-solid fa-play"></i> Watch</a>`;
+            }
+
+            row.innerHTML = `
+                <span class="log-timestamp">${event.timestamp}</span>
+                <span class="log-id">Car #${event.track_id}</span>
+                <span class="log-direction ${directionClass}"><i class="fa-solid ${icon}"></i> ${event.direction}</span>
+                <span class="log-clip">${clipHtml}</span>
+            `;
+            
+            if (animate) {
+                list.insertBefore(row, list.firstChild);
+                // Remove last item if too many
+                if (list.children.length > 25) {
+                    list.removeChild(list.lastChild);
+                }
+            } else {
+                list.appendChild(row);
+            }
+        }
+
+        // Value animation helper
+        function animateValue(id, start, end, duration) {
+            if (start === end) return;
+            const range = end - start;
+            let current = start;
+            const increment = end > start ? 1 : -1;
+            const stepTime = Math.abs(Math.floor(duration / range));
+            const obj = document.getElementById(id);
+            
+            const timer = setInterval(() => {
+                current += increment;
+                obj.innerText = current;
+                if (current == end) {
+                    clearInterval(timer);
+                }
+            }, Math.max(stepTime, 20));
+        }
+
+        // Trigger Visual Indicator for line crossing
+        function pulseGatewayIndicator(direction) {
+            const line = document.getElementById('gateVisualLine');
+            const car = document.getElementById('crossingIndicator');
+            const status = document.getElementById('gateStatusText');
+            
+            const pulseClass = direction === 'IN' ? 'pulse-cyan' : 'pulse-orange';
+            const slideClass = direction === 'IN' ? 'crossing-in' : 'crossing-out';
+
+            line.classList.add(pulseClass);
+            car.className = `visualizer-car-indicator ${slideClass}`;
+            status.innerText = `VEHICLE CROSSING [${direction}]`;
+            status.className = `hud-value warning-glow`;
+
+            setTimeout(() => {
+                line.classList.remove(pulseClass);
+                car.className = 'visualizer-car-indicator';
+                status.innerText = 'MONITORING';
+                status.className = 'hud-value active-glow';
+            }, 2500);
+        }
+
+        // Connect WebSocket
+        function connectWS() {
+            ws = new WebSocket(wsUrl);
+            const badge = document.getElementById('wsPulse');
+            const label = document.getElementById('wsStatusText');
+
+            ws.onopen = () => {
+                badge.className = 'pulse-dot green';
+                label.innerText = 'ONLINE';
+                fetchStats();
+                fetchLogs();
+                fetchChart();
+            };
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                if (data.type === 'new_event') {
+                    // Update stats
+                    fetchStats();
+                    // Append event to stream
+                    appendLogItem(data.event, true);
+                    // Update chart
+                    fetchChart();
+                    // Pulse gateway graphics
+                    pulseGatewayIndicator(data.event.direction);
+                }
+            };
+
+            ws.onclose = () => {
+                badge.className = 'pulse-dot red';
+                label.innerText = 'DISCONNECTED';
+                // Try reconnect
+                setTimeout(connectWS, 3000);
+            };
+
+            ws.onerror = (err) => {
+                console.error("WebSocket Error:", err);
+                ws.close();
+            };
+        }
+
+        // Init everything on page load
+        window.addEventListener('load', () => {
+            fetchStats();
+            fetchLogs();
+            fetchChart();
+            connectWS();
+        });
+    </script>
+</body>
+</html>
