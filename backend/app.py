@@ -1,5 +1,4 @@
-"""
-app.py — FastAPI Dashboard API for Warehouse Car Tracking
+"""app.py — FastAPI Dashboard API for Warehouse Car Tracking
 
 Endpoints:
     GET  /api/stats      → Today's IN / OUT / Occupancy counts
@@ -10,9 +9,12 @@ Endpoints:
     /*                   → Frontend dashboard (static HTML)
 """
 
+from __future__ import annotations
+
+import asyncio
 import os
 import sys
-import asyncio
+from typing import Any
 
 import dotenv
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
@@ -23,6 +25,7 @@ from fastapi.middleware.cors import CORSMiddleware
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from backend import database
+from backend.websocket_manager import ConnectionManager
 
 dotenv.load_dotenv()
 
@@ -40,33 +43,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-# ---------------------------------------------------------------------------
-# WebSocket Manager — Broadcasts new events to all connected dashboards
-# ---------------------------------------------------------------------------
-
-class ConnectionManager:
-    """Manages active WebSocket connections for real-time event broadcasting."""
-
-    def __init__(self):
-        self.active: list[WebSocket] = []
-
-    async def connect(self, ws: WebSocket):
-        await ws.accept()
-        self.active.append(ws)
-
-    def disconnect(self, ws: WebSocket):
-        if ws in self.active:
-            self.active.remove(ws)
-
-    async def broadcast(self, message: dict):
-        for ws in list(self.active):
-            try:
-                await ws.send_json(message)
-            except Exception:
-                self.disconnect(ws)
-
-
 manager = ConnectionManager()
 
 
@@ -74,9 +50,9 @@ manager = ConnectionManager()
 # Background Poller — Detects new DB events and pushes to WebSocket clients
 # ---------------------------------------------------------------------------
 
-async def poll_new_events():
-    """
-    Polls the database every second for new events.
+async def poll_new_events() -> None:
+    """Polls the database every second for new events.
+
     When a new event is found, broadcasts it to all WebSocket clients.
     """
     print("⏳ Starting database polling for real-time WebSocket events...")
@@ -107,7 +83,7 @@ async def poll_new_events():
 
 
 @app.on_event("startup")
-async def startup_event():
+async def startup_event() -> None:
     asyncio.create_task(poll_new_events())
 
 
@@ -116,7 +92,7 @@ async def startup_event():
 # ---------------------------------------------------------------------------
 
 @app.get("/api/stats")
-def get_stats():
+def get_stats() -> dict[str, Any]:
     """Today's car stats: total IN, total OUT, and estimated current occupancy."""
     try:
         today_data = database.get_today_report()
@@ -137,12 +113,12 @@ def get_stats():
         "in": car_in,
         "out": car_out,
         "inside": max(0, car_in - car_out),
-        "database_mode": "Supabase (Cloud)" if database.is_supabase_configured else "Not Connected",
+        "database_mode": "Supabase (Cloud)" if database.is_supabase_configured else "SQLite (Local)",
     }
 
 
 @app.get("/api/events")
-def get_events(limit: int = 15):
+def get_events(limit: int = 15) -> list[dict[str, Any]] | dict[str, Any]:
     """Last N crossing events (cars only)."""
     try:
         events = database.get_recent_events(limit=limit)
@@ -152,9 +128,8 @@ def get_events(limit: int = 15):
 
 
 @app.get("/api/chart-data")
-def get_chart_data():
-    """
-    Hourly car traffic for today, formatted for Chart.js.
+def get_chart_data() -> dict[str, Any]:
+    """Hourly car traffic for today, formatted for Chart.js.
 
     Returns:
         {
@@ -193,7 +168,7 @@ def get_chart_data():
 # ---------------------------------------------------------------------------
 
 @app.websocket("/ws/events")
-async def websocket_endpoint(ws: WebSocket):
+async def websocket_endpoint(ws: WebSocket) -> None:
     await manager.connect(ws)
     try:
         while True:

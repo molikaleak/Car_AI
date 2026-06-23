@@ -12,7 +12,6 @@ Used by the Telegram bot to handle /config, /setline, /setangle,
 from __future__ import annotations
 
 import os
-import re
 import signal
 import subprocess
 import sys
@@ -118,6 +117,24 @@ def get_current_config() -> dict[str, str]:
         "GRAYSCALE",
         "SLOW_SPEED",
         "TIME_MODE",
+        "HUD_WIDTH",
+        "HUD_HEIGHT",
+        "HUD_OPACITY",
+        "HUD_BACKGROUND_COLOR",
+        "HUD_TEXT_COLOR",
+        "BOX_COLOR_DEFAULT",
+        "GATE_LINE_COLOR",
+        "GATE_LINE_THICKNESS",
+        "NIGHT_BRIGHTNESS_THRESHOLD",
+        "DEVICE",
+        "DETECT_EVERY",
+        "TRACKER_TYPE",
+        "TRACK_HIGH_THRESH",
+        "TRACK_LOW_THRESH",
+        "NEW_TRACK_THRESH",
+        "TRACK_BUFFER",
+        "MATCH_THRESH",
+        "FUSE_SCORE",
     ]
     config: dict[str, str] = {}
     for key in keys:
