@@ -36,9 +36,7 @@ dotenv.load_dotenv()
 PROJECT_ROOT: str = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DB_PATH: str = os.path.join(PROJECT_ROOT, "warehouse.db")
 
-# Flag kept for backward compatibility with code that checks this
-# (e.g., recorder.py checks is_supabase_configured before uploading)
-is_supabase_configured: bool = False
+
 
 # Thread lock for safe concurrent writes from multiple threads
 _db_lock = threading.Lock()
@@ -221,16 +219,7 @@ def get_hourly_report() -> list[dict]:
     )
 
 
-# ---------------------------------------------------------------------------
-# Supabase Storage — stub (kept for backward compatibility)
-# ---------------------------------------------------------------------------
 
-def upload_to_supabase_storage(local_file_path: str, bucket_name: str = "events") -> str | None:
-    """Stub — cloud storage upload is disabled in local SQLite mode.
-
-    Returns None so the caller falls back to local video_path.
-    """
-    return None
 
 
 # ---------------------------------------------------------------------------
