@@ -135,6 +135,7 @@ def get_current_config() -> dict[str, str]:
         "TRACK_BUFFER",
         "MATCH_THRESH",
         "FUSE_SCORE",
+        "FALLBACK_FPS",
     ]
     config: dict[str, str] = {}
     for key in keys:

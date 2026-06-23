@@ -114,6 +114,7 @@ def _handle_start(chat_id: int | str, text: str = "") -> None:
         "🔹 `/setgrayscale True` — Grayscale mode (True/False)\n"
         "🔹 `/setslow 1.0` — Playback speed multiplier (1.0/0.5)\n"
         "🔹 `/settimemode auto` — TimeMode classification (auto/day/night)\n"
+        "🔹 `/setfallbackfps 30` — Fallback FPS (if properties cannot be read)\n"
         "🔹 `/restart` — Restart tracker with new settings\n\n"
         "*⚙️ Tracker Settings:*\n"
         "🔹 `/settrackertype bytetrack` — Tracker algorithm type\n"
@@ -208,7 +209,8 @@ def _handle_config(chat_id: int | str, text: str = "") -> None:
         f"  GUI: `{cfg['SHOW_GUI']}`\n"
         f"  Grayscale: `{cfg['GRAYSCALE']}`\n"
         f"  Speed: `{cfg['SLOW_SPEED']}`\n"
-        f"  Time Mode: `{cfg['TIME_MODE']}`\n\n"
+        f"  Time Mode: `{cfg['TIME_MODE']}`\n"
+        f"  Fallback FPS: `{cfg['FALLBACK_FPS']}`\n\n"
         "*🎨 Styling & HUD:*\n"
         f"  HUD Width: `{cfg['HUD_WIDTH']}`\n"
         f"  HUD Height: `{cfg['HUD_HEIGHT']}`\n"
@@ -749,6 +751,23 @@ def _handle_setfusescore(chat_id: int | str, text: str) -> None:
     send_reply(chat_id, f"✅ Fuse score set to `{val}`\n_Run_ `/restart` _to apply._")
 
 
+def _handle_setfallbackfps(chat_id: int | str, text: str) -> None:
+    """Set fallback FPS (positive integer)."""
+    parts = text.split()
+    if len(parts) < 2:
+        send_reply(chat_id, "❌ Usage: `/setfallbackfps 30`\nValue must be a positive integer.")
+        return
+    try:
+        value = int(parts[1])
+        if value <= 0 or value > 120:
+            raise ValueError
+    except ValueError:
+        send_reply(chat_id, "❌ Invalid FPS. Must be an integer between 1 and 120.")
+        return
+    config_manager.update_env_value("FALLBACK_FPS", str(value))
+    send_reply(chat_id, f"✅ Fallback FPS set to `{value}`\n_Run_ `/restart` _to apply._")
+
+
 # ---------------------------------------------------------------------------
 # Command → handler dispatch table
 # ---------------------------------------------------------------------------
@@ -793,5 +812,6 @@ _COMMAND_DISPATCH: dict[str, Any] = {
     "/settrackbuffer": _handle_settrackbuffer,
     "/setmatchthresh": _handle_setmatchthresh,
     "/setfusescore": _handle_setfusescore,
+    "/setfallbackfps": _handle_setfallbackfps,
     "/restart": _handle_restart,
 }

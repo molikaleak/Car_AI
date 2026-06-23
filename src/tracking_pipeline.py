@@ -23,7 +23,7 @@ from src.recorder import EventRecorder
 # Constants (replacing magic numbers)
 # ---------------------------------------------------------------------------
 
-FALLBACK_FPS: int = 30
+FALLBACK_FPS: int = int(os.environ.get("FALLBACK_FPS", 30))
 MAX_FPS: int = 100
 INACTIVE_TRACK_HISTORY_THRESHOLD: int = 30
 MIN_FILE_SIZE_BYTES: int = 1024
