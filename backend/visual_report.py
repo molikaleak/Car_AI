@@ -7,16 +7,11 @@ dark-themed dashboard style.
 """
 
 import os
-import sys
 from typing import List, Optional, Tuple
 
 from PIL import Image, ImageDraw, ImageFont
 
-try:
-    from src import timezone_helper
-except ImportError:
-    sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-    from src import timezone_helper
+from src import timezone_helper
 
 
 # ---------------------------------------------------------------------------
