@@ -1,3 +1,11 @@
+"""
+timezone_helper.py — Timezone Resolution and Local Time Utilities
+
+Provides timezone-aware datetime operations for the warehouse tracking
+system. Supports configuration via TIMEZONE or COUNTRY environment
+variables, with a fallback to Asia/Phnom_Penh (GMT+7).
+"""
+
 import os
 import datetime
 from datetime import timedelta
@@ -12,8 +20,11 @@ except ImportError:
     except ImportError:
         ZoneInfo = None
 
-# Country to IANA Timezone mapping
-COUNTRY_MAP = {
+# ---------------------------------------------------------------------------
+# Country-to-IANA timezone mapping
+# ---------------------------------------------------------------------------
+
+COUNTRY_MAP: dict[str, str] = {
     "cambodia": "Asia/Phnom_Penh",
     "kh": "Asia/Phnom_Penh",
     "khmer": "Asia/Phnom_Penh",
@@ -36,7 +47,7 @@ COUNTRY_MAP = {
 }
 
 # Common manual offsets in hours for fallback if zoneinfo/pytz fails
-MANUAL_OFFSETS = {
+MANUAL_OFFSETS: dict[str, int] = {
     "Asia/Phnom_Penh": 7,
     "Asia/Bangkok": 7,
     "Asia/Ho_Chi_Minh": 7,
@@ -44,63 +55,96 @@ MANUAL_OFFSETS = {
     "Asia/Singapore": 8,
     "Asia/Kuala_Lumpur": 8,
     "America/New_York": -5,
-    "Europe/London": 0
+    "Europe/London": 0,
 }
 
-def resolve_timezone_name():
-    """Resolves the configured timezone name from environment variables."""
-    # Load explicit timezone override
+# Default timezone when nothing is configured
+_DEFAULT_TIMEZONE = "Asia/Phnom_Penh"
+_DEFAULT_OFFSET_HOURS = 7
+
+
+# ---------------------------------------------------------------------------
+# Timezone Resolution
+# ---------------------------------------------------------------------------
+
+def resolve_timezone_name() -> str:
+    """Resolve the configured timezone name from environment variables.
+
+    Checks ``TIMEZONE`` first, then ``COUNTRY`` (mapped via ``COUNTRY_MAP``),
+    and defaults to ``Asia/Phnom_Penh`` if neither is set.
+    """
+    # Explicit timezone override
     tz_env = os.environ.get("TIMEZONE", "").strip()
     if tz_env:
         return tz_env
-        
-    # Check country-based lookup
-    country_env = os.environ.get("COUNTRY", "").strip().lower()
-    if country_env:
-        if country_env in COUNTRY_MAP:
-            return COUNTRY_MAP[country_env]
-            
-    # Default to Cambodia Time (GMT+7)
-    return "Asia/Phnom_Penh"
 
-def get_timezone_object():
-    """Returns a timezone object or datetime.timezone offset fallback."""
+    # Country-based lookup
+    country_env = os.environ.get("COUNTRY", "").strip().lower()
+    if country_env and country_env in COUNTRY_MAP:
+        return COUNTRY_MAP[country_env]
+
+    return _DEFAULT_TIMEZONE
+
+
+def get_timezone_object() -> datetime.timezone:
+    """Return a timezone object for the configured locale.
+
+    Uses ``zoneinfo.ZoneInfo`` when available, falling back to a fixed
+    UTC offset derived from ``MANUAL_OFFSETS``.
+    """
     tz_name = resolve_timezone_name()
     if ZoneInfo is not None:
         try:
             return ZoneInfo(tz_name)
         except Exception:
             pass
-            
-    # Fallback to fixed offset timezone if ZoneInfo is not available or fails
-    offset_hours = MANUAL_OFFSETS.get(tz_name, 7) # Default to GMT+7 (Cambodia/Thailand)
+
+    # Fallback to fixed offset timezone
+    offset_hours = MANUAL_OFFSETS.get(tz_name, _DEFAULT_OFFSET_HOURS)
     return datetime.timezone(timedelta(hours=offset_hours))
 
-def get_local_now():
-    """Returns the current datetime in the configured local timezone."""
+
+# ---------------------------------------------------------------------------
+# Public Datetime Helpers
+# ---------------------------------------------------------------------------
+
+def get_local_now() -> datetime.datetime:
+    """Return the current datetime in the configured local timezone."""
     tz_obj = get_timezone_object()
     return datetime.datetime.now(tz_obj)
 
-def to_local_datetime(dt):
-    """Converts a naive or aware datetime to the configured local timezone."""
+
+def get_today_date_str() -> str:
+    """Return today's date as ``YYYY-MM-DD`` in the configured timezone.
+
+    This is the single source of truth for date-string generation,
+    used by ``recorder.py`` and ``cleanup.py``.
+    """
+    return get_local_now().strftime("%Y-%m-%d")
+
+
+def to_local_datetime(dt: datetime.datetime) -> datetime.datetime:
+    """Convert a naive or aware datetime to the configured local timezone.
+
+    Naive datetimes are assumed to be UTC (Supabase convention).
+    """
     tz_obj = get_timezone_object()
     if dt.tzinfo is None:
-        # If naive, assume UTC and localize it (Supabase standard)
         dt = dt.replace(tzinfo=datetime.timezone.utc)
     return dt.astimezone(tz_obj)
 
-def get_timezone_offset_seconds():
-    """Returns the offset in seconds from UTC for the local timezone."""
+
+def get_timezone_offset_seconds() -> int:
+    """Return the UTC offset in seconds for the configured timezone."""
     now = datetime.datetime.now()
     tz_obj = get_timezone_object()
-    # If using fixed offset fallback
     if isinstance(tz_obj, datetime.timezone):
         return int(tz_obj.utcoffset(now).total_seconds())
-        
-    # Otherwise using ZoneInfo/pytz
+
     local_now = now.astimezone(tz_obj)
     return int(local_now.utcoffset().total_seconds())
 
-def get_timezone_offset_hours():
-    """Returns the offset in hours from UTC (e.g. 7.0 for GMT+7)."""
+
+def get_timezone_offset_hours() -> float:
+    """Return the UTC offset in hours (e.g. ``7.0`` for GMT+7)."""
     return get_timezone_offset_seconds() / 3600.0
