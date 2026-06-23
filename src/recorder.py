@@ -1,34 +1,31 @@
+"""recorder.py — Video Event Recorder
+
+Captures video clips preceding and succeeding crossing events, saves them locally,
+logs the event to database, and publishes notifications to Telegram.
+"""
+
+from __future__ import annotations
+
+from collections import deque
 import os
-import cv2
-import uuid
 import threading
 import time
-from datetime import datetime
-from collections import deque
+from typing import Any
+import uuid
 
-try:
-    from src import timezone_helper
-except ImportError:
-    try:
-        import timezone_helper
-    except ImportError:
-        timezone_helper = None
+import cv2
+import numpy as np
+
+from src.timezone_helper import get_local_now, get_today_date_str
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _get_today_date_str() -> str:
-    """Return today's date string (YYYY-MM-DD) in the configured timezone."""
-    if timezone_helper:
-        return timezone_helper.get_local_now().strftime("%Y-%m-%d")
-    return datetime.now().strftime("%Y-%m-%d")
-
-
 def _get_today_events_dir() -> str:
     """Return the path to today's date-based events subfolder, creating it if needed."""
-    date_str = _get_today_date_str()
+    date_str = get_today_date_str()
     date_dir = os.path.join("events", date_str)
     os.makedirs(date_dir, exist_ok=True)
     return date_dir
@@ -38,13 +35,14 @@ def _get_today_events_dir() -> str:
 # Background clip saver + Telegram sender
 # ---------------------------------------------------------------------------
 
-_TELEGRAM_MAX_RETRIES = 3
-_TELEGRAM_RETRY_DELAY = 5  # seconds between retries
+_TELEGRAM_MAX_RETRIES: int = 3
+_TELEGRAM_RETRY_DELAY: int = 5  # seconds between retries
+MIN_CLIP_FILE_SIZE: int = 1024
 
 
-def save_and_alert_clip(rec):
-    """
-    Background worker thread that compiles buffered frames into an MP4 clip,
+def save_and_alert_clip(rec: dict[str, Any]) -> None:
+    """Background worker thread that compiles buffered frames into an MP4 clip,
+
     logs the event to Supabase Postgres, and sends a Telegram alert.
 
     Clips are saved into date-based folders: events/YYYY-MM-DD/
@@ -77,7 +75,7 @@ def save_and_alert_clip(rec):
         out.release()
 
         # Validate the file was actually written
-        if not os.path.exists(clip_filename) or os.path.getsize(clip_filename) < 1024:
+        if not os.path.exists(clip_filename) or os.path.getsize(clip_filename) < MIN_CLIP_FILE_SIZE:
             print(f"⚠️ Clip file is too small or missing — skipping Telegram send: {clip_filename}")
             return
 
@@ -108,10 +106,7 @@ def save_and_alert_clip(rec):
             from backend import telegram_bot
 
             # Build caption with local timestamp
-            if timezone_helper:
-                timestamp_str = timezone_helper.get_local_now().strftime("%Y-%m-%d %H:%M:%S")
-            else:
-                timestamp_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            timestamp_str = get_local_now().strftime("%Y-%m-%d %H:%M:%S")
 
             caption = (
                 f"🚗 *WAREHOUSE GATEWAY ACTIVITY*\n\n"
@@ -144,16 +139,19 @@ def save_and_alert_clip(rec):
 
 
 class EventRecorder:
-    def __init__(self, fps, clip_before_sec, clip_after_sec):
+    """Manages recording of activity clips centered around crossing events."""
+
+    def __init__(self, fps: int, clip_before_sec: float, clip_after_sec: float) -> None:
         self.fps = fps
         self.clip_after_sec = clip_after_sec
         self.record_clips = os.environ.get("RECORD_CLIPS", "True").lower() in ("true", "1", "yes")
-        
-        buffer_size = int(clip_before_sec * fps)
-        self.frame_buffer = deque(maxlen=buffer_size)
-        self.active_recordings = []
 
-    def add_frame(self, frame):
+        buffer_size = int(clip_before_sec * fps)
+        self.frame_buffer: deque[np.ndarray] = deque(maxlen=buffer_size)
+        self.active_recordings: list[dict[str, Any]] = []
+
+    def add_frame(self, frame: np.ndarray) -> None:
+        """Buffer a video frame and write it to any active recording clips."""
         if not self.record_clips:
             return
         frame_to_buffer = frame.copy()
@@ -167,7 +165,10 @@ class EventRecorder:
                 threading.Thread(target=save_and_alert_clip, args=(rec,), daemon=True).start()
         self.frame_buffer.append(frame_to_buffer)
 
-    def trigger_recording(self, track_id, class_name, direction, width, height):
+    def trigger_recording(
+        self, track_id: int, class_name: str, direction: str, width: int, height: int
+    ) -> None:
+        """Trigger clip capture for a specific event."""
         if not self.record_clips:
             try:
                 from backend import database
@@ -186,7 +187,8 @@ class EventRecorder:
             "height": height
         })
 
-    def flush(self):
+    def flush(self) -> None:
+        """Flush and compile any currently active recordings."""
         if self.record_clips and self.active_recordings:
             print(f"\n🧹 Video stream ended. Flushing {len(self.active_recordings)} final active recordings...")
             for rec in self.active_recordings:

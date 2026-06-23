@@ -1,12 +1,14 @@
+"""config.py — CLI Argument Parsing and Environment Configuration
+
+Defines all command-line arguments and environment variable overrides
+for the warehouse vehicle tracking system.
+"""
+
 import argparse
 import os
 
-COCO_CLASSES = {
-    0: "Person",
-    2: "Car"
-}
 
-def parse_args():
+def parse_args() -> argparse.Namespace:
     # Load environment variables from .env if available
     try:
         import dotenv

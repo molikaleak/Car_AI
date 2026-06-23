@@ -1,11 +1,17 @@
+"""tracker.py — YOLO Model Loading and Device Resolution
+
+Handles hardware device selection (MPS/CUDA/CPU) and YOLO model
+initialization with ByteTrack tracker configuration.
+"""
+
 import os
+from typing import Any
 import torch
 from ultralytics import YOLO
 
-def get_device(device_arg="auto"):
-    """
-    Resolves the execution device.
-    """
+
+def get_device(device_arg: str = "auto") -> str:
+    """Resolves the execution device."""
     if device_arg == "auto":
         if torch.backends.mps.is_available():
             return "mps"
@@ -15,10 +21,9 @@ def get_device(device_arg="auto"):
             return "cpu"
     return device_arg
 
-def generate_tracker_config():
-    """
-    Generates custom_bytetrack.yaml dynamically based on environment variables.
-    """
+
+def generate_tracker_config() -> str:
+    """Generates custom_bytetrack.yaml dynamically based on environment variables."""
     tracker_type = os.environ.get("TRACKER_TYPE", "bytetrack")
     track_high_thresh = float(os.environ.get("TRACK_HIGH_THRESH", 0.25))
     track_low_thresh = float(os.environ.get("TRACK_LOW_THRESH", 0.1))
@@ -45,10 +50,9 @@ fuse_score: {fuse_score}
         print(f"⚠️ Warning: Could not write tracker config to '{tracker_path}': {e}. Using defaults.")
     return tracker_path
 
-def load_yolo_model(model_path):
-    """
-    Loads the YOLO model and returns target tracking class IDs and class_id_to_name map.
-    """
+
+def load_yolo_model(model_path: str) -> tuple[Any, list[int], dict[int, str]]:
+    """Loads the YOLO model and returns target tracking class IDs and class_id_to_name map."""
     print(f"⏳ Loading model: {model_path}...")
     model = YOLO(model_path)
     print("✅ Model loaded successfully!")
@@ -56,7 +60,7 @@ def load_yolo_model(model_path):
     # Map model class indices strictly to 'Car' (2)
     track_class_ids = []
     class_id_to_name = {}
-    
+
     for cls_id, name in model.names.items():
         name_lower = name.lower()
         if name_lower == "car":

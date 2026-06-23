@@ -1,5 +1,4 @@
-"""
-cleanup.py — Daily Event Video Cleanup
+"""cleanup.py — Daily Event Video Cleanup
 
 Runs a background thread that automatically removes event video folders
 from previous days, keeping only today's folder. Designed for long-running
@@ -20,39 +19,26 @@ import threading
 import time
 from datetime import datetime
 
-try:
-    from src import timezone_helper
-except ImportError:
-    try:
-        import timezone_helper
-    except ImportError:
-        timezone_helper = None
+from src.timezone_helper import get_today_date_str
 
 
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
 
-EVENTS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "events")
+EVENTS_DIR: str = os.path.join(os.path.dirname(os.path.dirname(__file__)), "events")
 
 # How often to check for old folders (in seconds) — default 1 hour
-_CLEANUP_INTERVAL_SEC = int(os.environ.get("CLEANUP_INTERVAL_SECONDS", 3600))
+_CLEANUP_INTERVAL_SEC: int = int(os.environ.get("CLEANUP_INTERVAL_SECONDS", 3600))
 
 
 # ---------------------------------------------------------------------------
 # Core Cleanup Logic
 # ---------------------------------------------------------------------------
 
-def _get_today_date_str() -> str:
-    """Return today's date string (YYYY-MM-DD) in the configured timezone."""
-    if timezone_helper:
-        return timezone_helper.get_local_now().strftime("%Y-%m-%d")
-    return datetime.now().strftime("%Y-%m-%d")
-
-
 def cleanup_old_event_folders() -> int:
-    """
-    Remove all date-based subdirectories in the events folder
+    """Remove all date-based subdirectories in the events folder
+
     except for today's folder.
 
     Also removes any legacy flat video files (not inside a date folder)
@@ -64,7 +50,7 @@ def cleanup_old_event_folders() -> int:
     if not os.path.isdir(EVENTS_DIR):
         return 0
 
-    today = _get_today_date_str()
+    today = get_today_date_str()
     removed_count = 0
 
     for entry in os.listdir(EVENTS_DIR):
@@ -110,7 +96,7 @@ def _cleanup_loop() -> None:
     """Background loop that runs cleanup periodically."""
     while True:
         try:
-            today = _get_today_date_str()
+            today = get_today_date_str()
             removed = cleanup_old_event_folders()
             if removed > 0:
                 print(f"🧹 Daily cleanup complete: removed {removed} old items. Keeping today ({today}).")
@@ -123,8 +109,7 @@ def _cleanup_loop() -> None:
 
 
 def start_cleanup_thread() -> threading.Thread:
-    """
-    Start the daily cleanup background thread.
+    """Start the daily cleanup background thread.
 
     Runs an immediate cleanup on startup, then checks periodically.
 
@@ -136,7 +121,7 @@ def start_cleanup_thread() -> threading.Thread:
     # Run one immediate cleanup on startup
     try:
         removed = cleanup_old_event_folders()
-        today = _get_today_date_str()
+        today = get_today_date_str()
         if removed > 0:
             print(f"🧹 Startup cleanup: removed {removed} old items. Keeping today ({today}).")
         else:
@@ -155,5 +140,5 @@ def start_cleanup_thread() -> threading.Thread:
 
 if __name__ == "__main__":
     print("Running manual cleanup...")
-    removed = cleanup_old_event_folders()
-    print(f"Done. Removed {removed} items.")
+    removed_items = cleanup_old_event_folders()
+    print(f"Done. Removed {removed_items} items.")
