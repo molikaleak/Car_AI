@@ -104,6 +104,59 @@
                 </div>
             </section>
 
+            <!-- ROW 1.5: VIDEO ANALYSIS CENTER -->
+            <section class="upload-section">
+                <div class="details-card upload-card glass">
+                    <div class="card-glow-upload"></div>
+                    <div class="card-header">
+                        <h2><i class="fa-solid fa-cloud-arrow-up"></i> Video Analysis Center</h2>
+                        <span class="subtext">Upload a video file to analyze vehicle crossings with AI</span>
+                    </div>
+                    <div class="upload-zone" id="uploadZone">
+                        <div class="upload-zone-content" id="uploadZoneContent">
+                            <div class="upload-icon-wrap">
+                                <i class="fa-solid fa-film upload-icon-main"></i>
+                                <div class="upload-icon-ring"></div>
+                            </div>
+                            <p class="upload-title">Drag & Drop Video Here</p>
+                            <p class="upload-subtitle">or click to browse files</p>
+                            <p class="upload-formats">Supports MP4, MOV, AVI, MKV</p>
+                            <input type="file" id="videoFileInput" accept="video/*" hidden>
+                        </div>
+                    </div>
+                    <!-- Processing Status -->
+                    <div class="processing-panel" id="processingPanel" style="display: none;">
+                        <div class="processing-header">
+                            <div class="processing-status-row">
+                                <span class="processing-status-icon" id="processingIcon">
+                                    <i class="fa-solid fa-gear fa-spin"></i>
+                                </span>
+                                <span class="processing-status-text" id="processingStatusText">Uploading video...</span>
+                            </div>
+                            <span class="processing-filename" id="processingFilename"></span>
+                        </div>
+                        <div class="progress-bar-track">
+                            <div class="progress-bar-fill" id="progressBarFill"></div>
+                            <div class="progress-bar-glow" id="progressBarGlow"></div>
+                        </div>
+                        <div class="processing-stats">
+                            <div class="proc-stat">
+                                <span class="proc-stat-label">FRAMES</span>
+                                <span class="proc-stat-value" id="procFrames">0 / 0</span>
+                            </div>
+                            <div class="proc-stat">
+                                <span class="proc-stat-label">PROGRESS</span>
+                                <span class="proc-stat-value" id="procPercent">0%</span>
+                            </div>
+                            <div class="proc-stat">
+                                <span class="proc-stat-label">CROSSINGS</span>
+                                <span class="proc-stat-value" id="procCrossings">0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
             <!-- ROW 2: DETAILED CHARTS & FEED STREAM -->
             <section class="details-container">
                 <!-- Traffic Chart Card -->
@@ -387,6 +440,25 @@
                     fetchChart();
                     // Pulse gateway graphics
                     pulseGatewayIndicator(data.event.direction);
+                } else if (data.type === 'processing_progress') {
+                    const p = data;
+                    const pct = p.total_frames > 0 ? Math.round((p.current_frame / p.total_frames) * 100) : 0;
+                    document.getElementById('progressBarFill').style.width = pct + '%';
+                    document.getElementById('procFrames').innerText = p.current_frame + ' / ' + p.total_frames;
+                    document.getElementById('procPercent').innerText = pct + '%';
+                    document.getElementById('procCrossings').innerText = (p.crossings_in || 0) + (p.crossings_out || 0);
+                    document.getElementById('processingStatusText').innerText = 'Analyzing frames...';
+                } else if (data.type === 'processing_complete') {
+                    document.getElementById('progressBarFill').style.width = '100%';
+                    document.getElementById('procPercent').innerText = '100%';
+                    document.getElementById('processingStatusText').innerText = 'Analysis complete!';
+                    document.getElementById('processingIcon').innerHTML = '<i class="fa-solid fa-circle-check"></i>';
+                    // Refresh dashboard data
+                    fetchStats();
+                    fetchLogs();
+                    fetchChart();
+                    // Reset upload UI after 5 seconds
+                    setTimeout(resetUploadUI, 5000);
                 }
             };
 
@@ -410,6 +482,77 @@
             fetchChart();
             connectWS();
         });
+        // ===== VIDEO UPLOAD LOGIC =====
+        const uploadZone = document.getElementById('uploadZone');
+        const fileInput = document.getElementById('videoFileInput');
+        const processingPanel = document.getElementById('processingPanel');
+        const uploadZoneContent = document.getElementById('uploadZoneContent');
+
+        // Click to browse
+        uploadZone.addEventListener('click', () => fileInput.click());
+
+        // Drag & drop handlers
+        uploadZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadZone.classList.add('drag-over');
+        });
+        uploadZone.addEventListener('dragleave', () => {
+            uploadZone.classList.remove('drag-over');
+        });
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('drag-over');
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith('video/')) {
+                startUpload(file);
+            }
+        });
+
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files[0]) {
+                startUpload(fileInput.files[0]);
+            }
+        });
+
+        async function startUpload(file) {
+            // Show processing panel, hide upload zone content
+            uploadZone.style.display = 'none';
+            processingPanel.style.display = 'block';
+            document.getElementById('processingFilename').innerText = file.name;
+            document.getElementById('processingStatusText').innerText = 'Uploading video...';
+            document.getElementById('processingIcon').innerHTML = '<i class="fa-solid fa-cloud-arrow-up fa-bounce"></i>';
+            document.getElementById('progressBarFill').style.width = '0%';
+            document.getElementById('procFrames').innerText = '0 / 0';
+            document.getElementById('procPercent').innerText = '0%';
+            document.getElementById('procCrossings').innerText = '0';
+
+            const formData = new FormData();
+            formData.append('video', file);
+
+            try {
+                const res = await fetch(`${apiHost}/api/upload`, {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await res.json();
+                if (result.status === 'processing') {
+                    document.getElementById('processingStatusText').innerText = 'Analyzing frames...';
+                    document.getElementById('processingIcon').innerHTML = '<i class="fa-solid fa-gear fa-spin"></i>';
+                } else {
+                    document.getElementById('processingStatusText').innerText = 'Error: ' + (result.detail || 'Upload failed');
+                    document.getElementById('processingIcon').innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>';
+                }
+            } catch (err) {
+                document.getElementById('processingStatusText').innerText = 'Upload failed: ' + err.message;
+                document.getElementById('processingIcon').innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>';
+            }
+        }
+
+        function resetUploadUI() {
+            uploadZone.style.display = 'block';
+            processingPanel.style.display = 'none';
+            fileInput.value = '';
+        }
     </script>
 </body>
 </html>

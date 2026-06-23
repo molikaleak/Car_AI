@@ -624,3 +624,283 @@ body {
     font-size: 24px;
     color: var(--purple-neon);
 }
+
+/* ======================================= */
+/* VIDEO UPLOAD SECTION                     */
+/* ======================================= */
+
+.upload-section {
+    margin-bottom: 0;
+}
+
+.upload-card {
+    padding: 28px;
+    position: relative;
+}
+
+.card-glow-upload {
+    position: absolute;
+    width: 200px;
+    height: 200px;
+    background: radial-gradient(circle, rgba(0, 240, 255, 0.08) 0%, transparent 70%);
+    top: -60px;
+    right: -60px;
+    pointer-events: none;
+}
+
+.upload-zone {
+    border: 2px dashed rgba(0, 240, 255, 0.2);
+    border-radius: 16px;
+    padding: 48px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    background: rgba(0, 240, 255, 0.02);
+    position: relative;
+    overflow: hidden;
+}
+
+.upload-zone::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at center, rgba(0, 240, 255, 0.04) 0%, transparent 60%);
+    opacity: 0;
+    transition: opacity 0.4s ease;
+}
+
+.upload-zone:hover {
+    border-color: rgba(0, 240, 255, 0.45);
+    background: rgba(0, 240, 255, 0.04);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(0, 240, 255, 0.08);
+}
+
+.upload-zone:hover::before {
+    opacity: 1;
+}
+
+.upload-zone.drag-over {
+    border-color: var(--cyan-neon);
+    background: rgba(0, 240, 255, 0.08);
+    box-shadow: 0 0 40px rgba(0, 240, 255, 0.15), inset 0 0 40px rgba(0, 240, 255, 0.05);
+    transform: scale(1.01);
+}
+
+.upload-zone-content {
+    text-align: center;
+    position: relative;
+    z-index: 1;
+}
+
+.upload-icon-wrap {
+    position: relative;
+    display: inline-block;
+    margin-bottom: 16px;
+}
+
+.upload-icon-main {
+    font-size: 42px;
+    color: var(--cyan-neon);
+    filter: drop-shadow(0 0 12px rgba(0, 240, 255, 0.4));
+    position: relative;
+    z-index: 1;
+}
+
+.upload-icon-ring {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 80px;
+    height: 80px;
+    transform: translate(-50%, -50%);
+    border: 2px solid rgba(0, 240, 255, 0.15);
+    border-radius: 50%;
+    animation: icon-ring-pulse 2.5s ease-in-out infinite;
+}
+
+@keyframes icon-ring-pulse {
+    0%, 100% { transform: translate(-50%, -50%) scale(0.9); opacity: 0.4; }
+    50% { transform: translate(-50%, -50%) scale(1.15); opacity: 0.8; }
+}
+
+.upload-title {
+    font-family: var(--font-heading);
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+
+.upload-subtitle {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+}
+
+.upload-formats {
+    font-size: 10px;
+    color: rgba(148, 163, 184, 0.5);
+    letter-spacing: 0.5px;
+}
+
+/* Processing Panel */
+.processing-panel {
+    margin-top: 8px;
+}
+
+.processing-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.processing-status-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.processing-status-icon {
+    font-size: 18px;
+    color: var(--cyan-neon);
+    filter: drop-shadow(0 0 8px rgba(0, 240, 255, 0.5));
+}
+
+.processing-status-icon .fa-circle-check {
+    color: var(--green-neon);
+    filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.5));
+}
+
+.processing-status-icon .fa-triangle-exclamation {
+    color: var(--orange-neon);
+    filter: drop-shadow(0 0 8px rgba(255, 170, 0, 0.5));
+}
+
+.processing-status-text {
+    font-family: var(--font-heading);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    letter-spacing: 0.3px;
+}
+
+.processing-filename {
+    font-size: 11px;
+    color: var(--text-secondary);
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Progress Bar */
+.progress-bar-track {
+    width: 100%;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+    margin-bottom: 16px;
+}
+
+.progress-bar-fill {
+    height: 100%;
+    width: 0%;
+    border-radius: 8px;
+    background: linear-gradient(90deg, var(--cyan-neon), var(--purple-neon));
+    box-shadow: 0 0 16px rgba(0, 240, 255, 0.4);
+    transition: width 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    position: relative;
+}
+
+.progress-bar-fill::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.3) 50%,
+        transparent 100%
+    );
+    animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+.progress-bar-glow {
+    position: absolute;
+    top: -4px;
+    left: 0;
+    width: 100%;
+    height: 16px;
+    background: linear-gradient(90deg, rgba(0, 240, 255, 0.0), rgba(0, 240, 255, 0.15), rgba(189, 52, 254, 0.15), rgba(189, 52, 254, 0.0));
+    filter: blur(6px);
+    border-radius: 8px;
+    pointer-events: none;
+}
+
+/* Processing Stats */
+.processing-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+}
+
+.proc-stat {
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.03);
+    border-radius: 10px;
+    padding: 12px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.proc-stat-label {
+    font-family: var(--font-heading);
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    color: var(--text-secondary);
+}
+
+.proc-stat-value {
+    font-family: var(--font-heading);
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--cyan-neon);
+    text-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
+}
+
+/* Card glow accents */
+.card-glow-cyan {
+    position: absolute;
+    width: 80px;
+    height: 80px;
+    background: radial-gradient(circle, rgba(0, 240, 255, 0.1) 0%, transparent 70%);
+    top: -20px;
+    right: -20px;
+    pointer-events: none;
+}
+
+.card-glow-orange {
+    position: absolute;
+    width: 80px;
+    height: 80px;
+    background: radial-gradient(circle, rgba(255, 170, 0, 0.1) 0%, transparent 70%);
+    top: -20px;
+    right: -20px;
+    pointer-events: none;
+}

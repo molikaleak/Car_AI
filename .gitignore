@@ -22,6 +22,7 @@
 
 # Explicitly ignore generated output files and clips
 events/
+uploads/
 output_*.mp4
 test.mp4
 result.jpg
