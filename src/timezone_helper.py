@@ -126,7 +126,7 @@ def get_today_date_str() -> str:
 def to_local_datetime(dt: datetime.datetime) -> datetime.datetime:
     """Convert a naive or aware datetime to the configured local timezone.
 
-    Naive datetimes are assumed to be UTC (Supabase convention).
+    Naive datetimes are assumed to be UTC.
     """
     tz_obj = get_timezone_object()
     if dt.tzinfo is None:

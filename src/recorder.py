@@ -81,17 +81,10 @@ def save_and_alert_clip(rec: dict[str, Any]) -> None:
 
         print(f"🎬 Event clip saved: {clip_filename}")
 
-        # 1. Log event to database (uploading to Supabase Storage first if cloud mode is configured)
-        db_video_path = clip_filename
+        # 1. Log event to database
         try:
             from backend import database
-            if database.is_supabase_configured:
-                print(f"☁️ Uploading {clip_filename} to Supabase Storage bucket 'events'...")
-                public_url = database.upload_to_supabase_storage(clip_filename)
-                if public_url:
-                    db_video_path = public_url
-
-            event_id = database.log_event(obj_type, track_id, direction, db_video_path)
+            event_id = database.log_event(obj_type, track_id, direction, clip_filename)
             print(f"💾 Logged event to database with ID: {event_id}")
         except Exception as e:
             print(f"❌ Error logging event to database: {e}")

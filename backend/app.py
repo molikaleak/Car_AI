@@ -113,7 +113,7 @@ def get_stats() -> dict[str, Any]:
         "in": car_in,
         "out": car_out,
         "inside": max(0, car_in - car_out),
-        "database_mode": "Supabase (Cloud)" if database.is_supabase_configured else "SQLite (Local)",
+        "database_mode": "SQLite (Local)",
     }
 
 
