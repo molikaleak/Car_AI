@@ -83,8 +83,48 @@ Integrates a Telegram bot to handle security notifications and remote control:
 * **Immediate Alerts**: Uploads short, annotated MP4 video clips (from $T-5$ seconds to $T+5$ seconds of crossing) directly to your Telegram chat immediately when a car crosses the gateway.
 * **Daily Reports**: Auto-generates a PDF report containing traffic summaries and tables, and pushes it to the Telegram chat.
 * **Interactive Commands**:
-  * `/status` — View current counts, memory, and database status.
-  * `/restart` — Restarts the tracking service remotely by locating and restarting the process ID saved in `.tracker.pid`.
+  * **📊 Reports**:
+    * `/today` — Today's traffic counts
+    * `/week` — Weekly traffic report
+    * `/month` — Monthly traffic report
+    * `/recent` — Last 10 crossing events
+    * `/status` — System status check
+  * **⚙️ Configuration**:
+    * `/config` — View current settings
+    * `/setline <float>` — Gate line relative position (0.0 to 1.0)
+    * `/setangle <float>` — Gate line angle in degrees (0 to 180)
+    * `/setdir <direction>` — IN direction (`right`, `left`, `up`, `down`)
+    * `/setconf <float>` — Detection confidence threshold (0.0 to 1.0)
+    * `/setdevice <auto/cpu/mps/cuda>` — Model processing device target
+    * `/setdetectevery <int>` — Run detection on every Nth frame (skip-rate)
+    * `/setcamera <source>` — Camera source (built-in webcam `0`, RTSP/HTTP URL)
+    * `/setclips <True/False>` — Save MP4 clips of crossings
+    * `/setbuffer <int>` — Pre-crossing clip recording buffer (seconds)
+    * `/setduration <int>` — Post-crossing clip recording duration (seconds)
+    * `/setgui <True/False>` — Show live tracking GUI window on screen
+    * `/setgrayscale <True/False>` — Grayscale preprocessing mode
+    * `/setslow <float>` — Playback speed multiplier (1.0 or 0.5)
+    * `/settimemode <auto/day/night>` — Time mode classification
+  * **⚙️ Tracker Settings**:
+    * `/settrackertype <bytetrack/...>` — Tracker algorithm type
+    * `/settrackhigh <float>` — High-confidence association threshold
+    * `/settracklow <float>` — Low-confidence association threshold
+    * `/setnewtrack <float>` — Minimum score to start a new track
+    * `/settrackbuffer <int>` — Frames to keep lost tracks in memory
+    * `/setmatchthresh <float>` — Overlap match IoU threshold
+    * `/setfusescore <True/False>` — Fuse detection score with track
+  * **🎨 Styling & HUD**:
+    * `/sethudwidth <int>` — HUD statistics box width (pixels)
+    * `/sethudheight <int>` — HUD statistics box height (pixels)
+    * `/sethudopacity <float>` — HUD background opacity (0.0 to 1.0)
+    * `/sethudbg <B,G,R>` — HUD background BGR color (e.g., `0,0,0`)
+    * `/sethudtext <B,G,R>` — HUD text BGR color (e.g., `255,255,255`)
+    * `/setboxcolor <B,G,R>` — Default bounding box BGR color
+    * `/setgatecolor <B,G,R>` — Gate line BGR color
+    * `/setgatethick <int>` — Gate line thickness in pixels
+    * `/setnightthresh <int>` — Night mode brightness threshold (0 to 255)
+  * **🔄 Service Management**:
+    * `/restart` — Restarts the tracking service remotely to apply updated configuration settings.
 
 ### 5. Deployment & Process Orchestration
 * **Multi-Service Script (`start_services.sh`)**: Launches the FastAPI web server, the Telegram bot polling service, and the YOLO tracking loop concurrently. It monitors process health in the background and shuts all services down cleanly upon exit.
