@@ -10,12 +10,12 @@ An automated warehouse gateway vehicle tracking and monitoring system. The proje
 graph TD
     Camera[IP Camera / Video Source] -->|Stream| Tracker[YOLO + ByteTrack AI Engine]
     Tracker -->|Local Clips| EventsFolder[events/ Directory]
-    Tracker -->|Crossings| PostgreSQL[(Supabase PostgreSQL)]
+    Tracker -->|Crossings| SQLite[(Local SQLite DB)]
     
-    PostgreSQL -->|Fetch Data| API[FastAPI Web Server]
+    SQLite -->|Fetch Data| API[FastAPI Web Server]
     API -->|WebSockets / REST| Dashboard[Web UI Dashboard]
     
-    PostgreSQL -->|Fetch Data| Bot[Telegram Alert Bot]
+    SQLite -->|Fetch Data| Bot[Telegram Alert Bot]
     Bot -->|Video Clip Uploads| TelegramUser((Telegram Chat))
 ```
 
@@ -73,10 +73,10 @@ A premium, dark-mode, fully responsive dashboard built with vanilla CSS and Java
 * **Visual Graphing**: Uses Chart.js to render interactive hourly logistics traffic.
 * **Event Log Feed**: Displays a running list of crossings, complete with direct links to view short recorded video clips of the crossing event.
 
-### 3. PostgreSQL / Supabase Database (`backend/database.py`)
-Persists data directly to a PostgreSQL database (e.g. Supabase). 
+### 3. SQLite Database (`backend/database.py`)
+Persists data locally to a SQLite database. 
 * **Tables**: Stores crossing event records including `track_id`, `object_type`, `direction`, `timestamp`, and the local file path to the video clip.
-* **Auto-Fallback**: Connects using a robust pooled connection builder.
+* **Thread-Safe**: Uses thread locks and WAL (Write-Ahead Logging) mode for robust concurrent read/write access.
 
 ### 4. Telegram Alert Bot (`backend/telegram_bot.py`)
 Integrates a Telegram bot to handle security notifications and remote control:
@@ -113,7 +113,6 @@ Key configuration settings to adjust in `.env`:
 * `DETECT_EVERY=10` (Adjust frame skipping; `1` = no skip, `10` = run 3 times/sec at 30 FPS)
 * `TRACK_BUFFER=150` (Lost object tracking memory duration in frames)
 * `TELEGRAM_BOT_TOKEN` & `TELEGRAM_CHAT_ID` (For alerts and PDF reports)
-* `SUPABASE_DB_HOST` & credentials (For PostgreSQL storage)
 
 ### 3. Run Services
 Start the tracking system, API dashboard, and Telegram bot together:
