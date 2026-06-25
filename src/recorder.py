@@ -96,7 +96,7 @@ def save_and_alert_clip(rec: dict[str, Any]) -> None:
                 print(f"⏳ Delaying Telegram alert by {alert_delay}s for track #{track_id}...")
                 time.sleep(alert_delay)
 
-            from backend import telegram_bot
+            from backend.telegram_client import send_telegram_video
 
             # Build caption with local timestamp
             timestamp_str = get_local_now().strftime("%Y-%m-%d %H:%M:%S")
@@ -112,7 +112,7 @@ def save_and_alert_clip(rec: dict[str, Any]) -> None:
             # Retry loop — network issues on Mac Mini can cause transient failures
             success = False
             for attempt in range(1, _TELEGRAM_MAX_RETRIES + 1):
-                success = telegram_bot.send_telegram_video(clip_filename, caption=caption)
+                success = send_telegram_video(clip_filename, caption=caption)
                 if success:
                     print(f"✈️ Telegram video sent for track #{track_id} (attempt {attempt}).")
                     break
@@ -142,6 +142,7 @@ class EventRecorder:
         buffer_size = int(clip_before_sec * fps)
         self.frame_buffer: deque[np.ndarray] = deque(maxlen=buffer_size)
         self.active_recordings: list[dict[str, Any]] = []
+        self.threads: list[threading.Thread] = []
 
     def add_frame(self, frame: np.ndarray) -> None:
         """Buffer a video frame and write it to any active recording clips."""
@@ -155,7 +156,9 @@ class EventRecorder:
             else:
                 self.active_recordings.remove(rec)
                 # Spawn background thread to compile video, log to DB, and notify Telegram
-                threading.Thread(target=save_and_alert_clip, args=(rec,), daemon=True).start()
+                t = threading.Thread(target=save_and_alert_clip, args=(rec,), daemon=True)
+                t.start()
+                self.threads.append(t)
         self.frame_buffer.append(frame_to_buffer)
 
     def trigger_recording(
@@ -187,3 +190,10 @@ class EventRecorder:
             for rec in self.active_recordings:
                 save_and_alert_clip(rec)
             self.active_recordings.clear()
+
+        if self.threads:
+            print(f"⏳ Waiting for {len(self.threads)} background upload threads to finish...")
+            for t in self.threads:
+                if t.is_alive():
+                    t.join()
+            print("✅ All background upload threads finished.")

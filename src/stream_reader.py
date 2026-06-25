@@ -35,6 +35,7 @@ class ThreadedStreamReader:
         self.started: bool = False
         self.read_lock = threading.Lock()
         self.thread: threading.Thread | None = None
+        self.new_frame: bool = False
 
     def start(self) -> ThreadedStreamReader:
         """Start the background stream reader thread."""
@@ -63,12 +64,16 @@ class ThreadedStreamReader:
             with self.read_lock:
                 self.ret = ret
                 self.frame = frame
+                self.new_frame = True
 
     def read(self) -> tuple[bool, np.ndarray | None]:
-        """Return the latest frame copy to avoid race conditions."""
+        """Return the latest frame copy only if it is a new frame."""
         with self.read_lock:
+            if not self.new_frame:
+                return False, None
             # Return copy of the frame to prevent access conflicts
             frame_copy = self.frame.copy() if self.frame is not None else None
+            self.new_frame = False
             return self.ret, frame_copy
 
     def release(self) -> None:

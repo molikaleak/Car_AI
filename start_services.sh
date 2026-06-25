@@ -20,17 +20,17 @@ echo "🐍 Using Python: $PYTHON ($(${PYTHON} --version 2>&1))"
 
 # 1. Start FastAPI Dashboard
 echo "📡 Launching Web Dashboard on http://localhost:8000..."
-$PYTHON backend/app.py > logs/dashboard.log 2>&1 &
+$PYTHON -u backend/app.py > logs/dashboard.log 2>&1 &
 DASHBOARD_PID=$!
 
 # 2. Start Telegram Bot Polling
 echo "🤖 Launching Telegram Bot Polling Service..."
-$PYTHON backend/telegram_bot.py > logs/telegram_bot.log 2>&1 &
+$PYTHON -u backend/telegram_bot.py > logs/telegram_bot.log 2>&1 &
 BOT_PID=$!
 
 # 3. Start YOLO Tracker
 echo "📹 Launching ByteTrack Car Tracking Engine..."
-$PYTHON main.py > logs/tracker.log 2>&1 &
+$PYTHON -u main.py > logs/tracker.log 2>&1 &
 TRACKER_PID=$!
 
 echo "---------------------------------------------"

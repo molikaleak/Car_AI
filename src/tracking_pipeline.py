@@ -197,6 +197,7 @@ class TrackingPipeline:
             classes = results[0].boxes.cls.int().cpu().numpy()
 
             for box, track_id, cls in zip(boxes, track_ids, classes):
+                track_id = int(track_id)
                 current_ids.add(track_id)
                 x1, y1, x2, y2 = map(int, box)
                 class_name = self.class_id_to_name.get(cls, "Object")
